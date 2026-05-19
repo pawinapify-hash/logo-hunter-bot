@@ -20,13 +20,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # เพิ่ม gdown สำหรับช่วยดาวน์โหลดไฟล์ขนาดใหญ่จาก Google Drive
-          pip install yt-dlp apify-client gspread opencv-python torch torchvision gdown
+          pip install yt-dlp apify-client gspread opencv-python torch torchvision gdown google-api-python-client google-auth-oauthlib
 
       - name: Download AI Model from Google Drive
         run: |
-          # สั่งให้ดาวน์โหลดไฟล์โมเดล AI ลงมาใน GitHub Actions ชั่วคราวก่อนเริ่มทำงาน
-          gdown --id ${{ secrets.MODEL_FILE_ID }} -O bigc_model.pth
+          # 🛠️ แก้ไขตรงนี้: ตัด --id ออก แล้วใส่รหัสความลับตรงๆ ตามกฎของ gdown เวอร์ชันใหม่
+          gdown ${{ secrets.MODEL_FILE_ID }} -O bigc_model.pth
 
       - name: Create credentials.json from Secret
         run: |
