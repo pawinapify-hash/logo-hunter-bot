@@ -24,8 +24,8 @@ jobs:
 
       - name: Download AI Model from Google Drive
         run: |
-          # ดาวน์โหลดไฟล์โมเดล AI มาจาก Google Drive อัตโนมัติด้วยรหัส ID ที่ใส่ใน Secrets
-          gdown --id ${{ secrets.MODEL_FILE_ID }} -O bigc_model.pth
+          # 🛠️ แก้ไขตรงนี้: ตัด --id ออก แล้วใส่รหัสความลับตรงๆ ตามกฎของ gdown เวอร์ชันใหม่
+          gdown ${{ secrets.MODEL_FILE_ID }} -O bigc_model.pth
 
       - name: Create credentials.json from Secret
         run: |
