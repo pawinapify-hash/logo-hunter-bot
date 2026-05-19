@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.2 (Ultimate GitHub Edition - TikTok Payload Fix)
+🚀 INTELLIGENT LOGO HUNTER v7.9.3 (Ultimate GitHub Edition - Typo Fix)
 - โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
+- แก้ไขบั๊ก SyntaxError (เอาคำว่า parks ออกจากเงื่อนไขสแกนรูปหน้าปก)
 - ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
 - แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API
 - รองรับการรันแบบ Serverless (รันจบ 1 รอบแล้วปิดตัวเอง ไม่กดสลับสถานะ Sheet เป็น Stop เอง)
@@ -273,17 +274,15 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     print(f"  ❌ YouTube API Keys ทั้งหมดโควตาเต็ม หรือไม่ได้ตั้งค่า!")
 
             else:
-                # 🛑 ใช้รหัส Actor ID ของ clockworks โดยตรงเพื่อความแม่นยำสูงสุด
                 actor = {'TikTok': 'GdWCkxBtKWOsKjdch', 'Instagram': 'apify/instagram-hashtag-scraper', 'Facebook': 'apify/facebook-search-scraper'}.get(plat)
                 if not actor: continue
                 
                 inp = {}
                 if plat == 'TikTok':
                     clean_kw = kw.replace("#", "").strip()
-                    # 🔧 ปรับโครงสร้างข้อมูล Input ใหม่ให้ตรงกับข้อกำหนดของ clockworks/tiktok-scraper เป๊ะๆ
                     inp = {
                         "resultsLimit": max_res,
-                        "sortType": 1, # 1 = เรียงตามวันที่อัปเดตล่าสุด (Date)
+                        "sortType": 1, 
                         "proxyConfiguration": {"useApifyProxy": True}
                     }
                     if kw.startswith('#'):
@@ -407,7 +406,7 @@ def main():
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.2 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v7.9.3 (GitHub Edition) ONLINE")
 
     while True:
         try:
@@ -479,7 +478,8 @@ def main():
                     except: 
                         pass
 
-                    if not found parks and v.get('image_url'):
+                    # 🛠️ แก้ไขเรียบร้อย: นำคำว่า parks ออกจากบรรทัดด้านล่างนี้แล้วครับ
+                    if not found and v.get('image_url'):
                         try:
                             resp = requests.get(v['image_url'], timeout=10)
                             img = cv2.imdecode(np.asarray(bytearray(resp.content), dtype=np.uint8), cv2.IMREAD_COLOR)
