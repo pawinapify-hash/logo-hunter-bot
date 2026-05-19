@@ -1,0 +1,40 @@
+name: Logo Hunter Bot (GAS Triggered)
+
+on:
+  repository_dispatch:
+    types: [trigger-from-gas] # 🟢 รอรับคำสั่งที่ส่งมาจาก Google Apps Script
+  workflow_dispatch:          # 🟢 ปุ่มกดรันเองด้วยมือ เผื่อต้องการทดสอบระบบบน GitHub
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yt-dlp apify-client gspread opencv-python torch torchvision gdown google-api-python-client google-auth-oauthlib
+
+      - name: Download AI Model from Google Drive
+        run: |
+          # ดาวน์โหลดไฟล์โมเดล AI มาจาก Google Drive อัตโนมัติด้วยรหัส ID ที่ใส่ใน Secrets
+          gdown --id ${{ secrets.MODEL_FILE_ID }} -O bigc_model.pth
+
+      - name: Create credentials.json from Secret
+        run: |
+          echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
+
+      - name: Run Bot Script
+        env:
+          YOUTUBE_API_KEYS: ${{ secrets.YOUTUBE_API_KEYS }}
+          APIFY_TOKENS: ${{ secrets.APIFY_TOKENS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+        run: python bot.py
