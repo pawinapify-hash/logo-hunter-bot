@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.3 (Ultimate GitHub Edition - Typo Fix)
+🚀 INTELLIGENT LOGO HUNTER v7.9.4 (Ultimate GitHub Edition - Report Format Fix)
 - โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
-- แก้ไขบั๊ก SyntaxError (เอาคำว่า parks ออกจากเงื่อนไขสแกนรูปหน้าปก)
+- ปรับปรุงระบบรายงานผลทาง Google Chat ให้แจกแจงยอดดึง ยอดซ้ำ และยอดที่ AI สแกนจริงอย่างละเอียด
 - ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
 - แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API
 - รองรับการรันแบบ Serverless (รันจบ 1 รอบแล้วปิดตัวเอง ไม่กดสลับสถานะ Sheet เป็น Stop เอง)
@@ -48,7 +48,6 @@ import gspread
 from PIL import Image
 from torchvision import transforms
 
-# 🛡️ ป้องกัน Error เวลาไม่ได้รันบน Colab
 try:
     from google.colab import drive, auth
     from google.auth import default
@@ -131,17 +130,24 @@ def send_google_chat_message(message, webhook_url):
     except Exception as e: 
         print(f"⚠️ Google Chat Send Exception: {e}")
 
+# 🛠️ ปรับโฉมระบบรายงานผลใหม่ แจกแจงตัวเลขสแกนจริงของ AI ให้เคลียร์ที่สุด
 def generate_summary_message(name_group, p_list, raw, unique, dup, chat):
     if not raw and not unique: return None 
-    msg = f"📊 อัปเดตข้อมูลจาก Logo Hunter ({name_group})\n🔗 แพลตฟอร์ม: {', '.join(p_list)}\n📥 ดึงมาทั้งหมด: {len(raw)} โพสต์\n✨ ข้อมูลใหม่: {len(unique)} โพสต์\n🔁 ข้อมูลซ้ำ: {len(dup)} โพสต์\n"
+    msg = f"📊 อัปเดตข้อมูลจาก Logo Hunter ({name_group})\n"
+    msg += f"🔗 แพลตฟอร์ม: {', '.join(p_list)}\n"
+    msg += f"📥 ดึงมาจาก API ทั้งหมด: {len(raw)} โพสต์\n"
+    msg += f"🔁 เป็นโพสต์ซ้ำ/เก่า (ระบบคัดออก): {len(dup)} โพสต์\n"
+    msg += f"👁️ ส่งให้ AI สแกนภาพ/วิดีโอจริง: {len(unique)} โพสต์\n"
+    msg += f"🎯 AI ตรวจพบโลโก้ BigC: {len(chat)} โพสต์\n"
+    
     if chat:
-        msg += f"🎯 พบโลโก้: {len(chat)} โพสต์\n\n🚨 ลิงก์โพสต์ที่พบโลโก้:\n"
+        msg += "\n🚨 ลิงก์โพสต์ที่พบโลโก้:\n"
         for item in chat[:15]: 
             msg += f"• {item['url']}\n  (🖼️ รูปหลักฐาน: {item['img_url']})\n"
         if len(chat) > 15: 
             msg += f"• ... และอื่นๆ อีก {len(chat) - 15} รายการ\n"
     elif unique:
-        msg += f"🎯 พบโลโก้: 0 โพสต์\n\n📌 ลิงก์โพสต์ใหม่ (ส่งตรวจสอบแล้ว):\n"
+        msg += "\n📌 ลิงก์โพสต์ใหม่ (สแกนแล้วไม่พบโลโก้ แต่ลง Sheet ให้ไปรีวิวด้วยมือ):\n"
         for u in unique[:15]: 
             msg += f"• {u['url']}\n"
         if len(unique) > 15: 
@@ -406,7 +412,7 @@ def main():
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.3 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v7.9.4 (GitHub Edition) ONLINE")
 
     while True:
         try:
@@ -478,7 +484,6 @@ def main():
                     except: 
                         pass
 
-                    # 🛠️ แก้ไขเรียบร้อย: นำคำว่า parks ออกจากบรรทัดด้านล่างนี้แล้วครับ
                     if not found and v.get('image_url'):
                         try:
                             resp = requests.get(v['image_url'], timeout=10)
