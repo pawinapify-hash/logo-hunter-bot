@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.4 (Ultimate GitHub Edition - Report Format Fix)
+🚀 INTELLIGENT LOGO HUNTER v7.9.5 (Ultimate GitHub Edition - TikTok Search Fix)
 - โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
+- 🛠️ แก้ไขบั๊กส่งตัวแปรค้นหา TikTok ผิดช่อง (เปลี่ยนจาก searchTerms เป็น searchQueries)
 - ปรับปรุงระบบรายงานผลทาง Google Chat ให้แจกแจงยอดดึง ยอดซ้ำ และยอดที่ AI สแกนจริงอย่างละเอียด
-- ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
 - แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API
 - รองรับการรันแบบ Serverless (รันจบ 1 รอบแล้วปิดตัวเอง ไม่กดสลับสถานะ Sheet เป็น Stop เอง)
 - ระบบ Hard Limit ป้องกันการดึงคลิปเกินจำนวนที่กำหนด (ประหยัดทรัพยากรเครื่อง)
@@ -130,7 +130,6 @@ def send_google_chat_message(message, webhook_url):
     except Exception as e: 
         print(f"⚠️ Google Chat Send Exception: {e}")
 
-# 🛠️ ปรับโฉมระบบรายงานผลใหม่ แจกแจงตัวเลขสแกนจริงของ AI ให้เคลียร์ที่สุด
 def generate_summary_message(name_group, p_list, raw, unique, dup, chat):
     if not raw and not unique: return None 
     msg = f"📊 อัปเดตข้อมูลจาก Logo Hunter ({name_group})\n"
@@ -294,7 +293,8 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     if kw.startswith('#'):
                         inp["hashtags"] = [clean_kw]
                     else:
-                        inp["searchTerms"] = [kw]
+                        # 🌟 FIXED: เปลี่ยนตัวแปรเป็น searchQueries เพื่อป้องกันการล่มของ Apify
+                        inp["searchQueries"] = [kw]
                 elif plat == 'Instagram':
                     inp = {
                         "hashtags": [kw.replace("#", "").replace(" ", "")],
@@ -412,7 +412,7 @@ def main():
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.4 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v7.9.5 (GitHub Edition) ONLINE")
 
     while True:
         try:
