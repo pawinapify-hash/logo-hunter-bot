@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.5 (Ultimate GitHub Edition - TikTok Search Fix)
+🚀 INTELLIGENT LOGO HUNTER v7.9.7 (Ultimate GitHub Edition - Absolute Cell Parser)
 - โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
-- 🛠️ แก้ไขบั๊กส่งตัวแปรค้นหา TikTok ผิดช่อง (เปลี่ยนจาก searchTerms เป็น searchQueries)
-- ปรับปรุงระบบรายงานผลทาง Google Chat ให้แจกแจงยอดดึง ยอดซ้ำ และยอดที่ AI สแกนจริงอย่างละเอียด
-- แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API
-- รองรับการรันแบบ Serverless (รันจบ 1 รอบแล้วปิดตัวเอง ไม่กดสลับสถานะ Sheet เป็น Stop เอง)
+- 🛠️ แก้ไขบั๊กตำแหน่งแถวเลื่อน โดยเปลี่ยนมาใช้การระบุตำแหน่งเซลล์ตรงๆ (B1 - B7) ป้องกันความผิดพลาด 100%
+- 🛠️ ดึงจำนวนข้อมูลสูงสุดจาก B7 ตรงๆ (แก้ปัญหาดึงคลิปได้แค่คีย์เวิร์ดละ 1 โพสต์)
+- 🛠️ ดึงข้อมูลช่วงเวลาสแกนย้อนหลังจาก B4 ตรงๆ (1=Day, 2=Week, 3=Month)
+- ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
+- แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API และแชร์สิทธิ์โฟลเดอร์ Google Drive
 - ระบบ Hard Limit ป้องกันการดึงคลิปเกินจำนวนที่กำหนด (ประหยัดทรัพยากรเครื่อง)
 - เพิ่มระบบ Retry ป้องกัน Google Sheets API Error 503 ล่มชั่วคราว
-- อ่านค่า Time Filter แบบเดิม (1=Day, 2=Week, 3=Month)
-- เก็บ Log คลิปเก่ารวมในลิสต์ "ซ้ำ" แต่ไม่สแกนและไม่ลง Sheet Apify
-- Batch Insert แทรก "FALSE" ให้ Checkbox ใช้งานได้ (คอลัมน์ I), Timestamp (คอลัมน์ J)
 """
 
 import os
@@ -156,6 +154,7 @@ def generate_summary_message(name_group, p_list, raw, unique, dup, chat):
 
 def update_heartbeat(ws_control):
     try: 
+        # เขียนเวลาชีพจรลงที่ B9 ตรงๆ เพื่อเช็คสถานะการทำงาน
         ws_control.update_cell(9, 2, get_bkk_now().strftime('%Y-%m-%d %H:%M:%S'))
     except: 
         pass
@@ -293,7 +292,6 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     if kw.startswith('#'):
                         inp["hashtags"] = [clean_kw]
                     else:
-                        # 🌟 FIXED: เปลี่ยนตัวแปรเป็น searchQueries เพื่อป้องกันการล่มของ Apify
                         inp["searchQueries"] = [kw]
                 elif plat == 'Instagram':
                     inp = {
@@ -412,27 +410,41 @@ def main():
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.5 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v7.9.7 (GitHub Edition) ONLINE")
 
     while True:
         try:
             update_heartbeat(ws_control)
-            config = ws_control.col_values(2)
-            status = str(config[0]).strip() if len(config) > 0 else "🔴 Stop"
+            
+            # ==========================================
+            # 🎯 🛠️ ดึงข้อมูลจากเซลล์โดยตรง (B1 - B7) ป้องกันปัญหายอดดึงเพี้ยน
+            # ==========================================
+            status = str(ws_control.acell('B1').value or "🔴 Stop").strip()
+            platforms_raw = str(ws_control.acell('B2').value or "TikTok").strip()
+            keywords_raw = str(ws_control.acell('B3').value or "บิ๊กซี").strip()
+            time_filter_raw = str(ws_control.acell('B4').value or "1").strip()
+            run_mode = str(ws_control.acell('B5').value or "Loop").strip()
+            interval_raw = str(ws_control.acell('B6').value or "60").strip()
+            max_res_raw = str(ws_control.acell('B7').value or "15").strip()
+
+            platforms = [p.strip() for p in platforms_raw.split(',')]
+            keywords = [k.strip() for k in keywords_raw.split(',')]
+            
+            # ตรรกะช่วงเวลาย้อนหลัง (1=Day, 2=Week, 3=Month)
+            days_back = 1
+            if '2' in time_filter_raw: days_back = 7
+            elif '3' in time_filter_raw: days_back = 30
+                
+            # ลิมิตจำนวนคลิปสูงสุดที่จะดึงต่อ 1 Keyword (ดึงตรงจาก B7 แน่นอน 100%)
+            max_res = int(max_res_raw) if max_res_raw.isdigit() else 15
+            interval = int(interval_raw) if interval_raw.isdigit() else 60
 
             if 'Start' not in status and '🟢' not in status:
                 print(f"\r⏳ [Standby] Waiting for command... ({get_bkk_now().strftime('%H:%M:%S')})", end="")
                 time.sleep(15)
                 continue
 
-            platforms = [p.strip() for p in config[1].split(',')]
-            keywords = [k.strip() for k in config[2].split(',')]
-            
-            days_back = 1 if '1' in str(config[3]) else 7 if '2' in str(config[3]) else 30
-            max_res = int(config[6]) if str(config[6]).isdigit() else 5
-            run_mode = str(config[4]).strip()
-
-            print(f"\n\n🔥 Processing Batch: {get_bkk_now().strftime('%H:%M:%S')}")
+            print(f"\n\n🔥 Processing Batch: {get_bkk_now().strftime('%H:%M:%S')} (Max Results Set to: {max_res})")
             raw_list = fetch_data(platforms, keywords, max_res, days_back)
             processed_urls = set(ws_data.col_values(7)[1:]) 
             
@@ -544,7 +556,8 @@ def main():
             if 'Run Once' in run_mode:
                 print("\n🏁 Run Once finished. Updating status to Stop.")
                 try: 
-                    ws_control.update_cell(1, 2, '🔴 Stop') 
+                    # ปรับสถานะ B1 เป็น Stop ด้วยการระบุตรงพิกัดเซลล์
+                    ws_control.update_cell(1, 2, '🔴 Stop')
                 except: 
                     pass
                 if not ('auth' in globals()): 
@@ -555,7 +568,6 @@ def main():
                 break 
             else:
                 if 'Run Once' not in run_mode:
-                    interval = int(config[5]) if str(config[5]).isdigit() else 60
                     print(f"\n💤 Next iteration in {interval} mins...")
                     for _ in range(interval * 6):
                         update_heartbeat(ws_control)
