@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.7 (Ultimate GitHub Edition - Absolute Cell Parser)
+🚀 INTELLIGENT LOGO HUNTER v7.9.9 (Ultimate GitHub Edition - Advanced Reporting)
 - โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
+- 🛠️ ปรับปรุงระบบรายงานผล Google Chat สรุปครบทุกรายละเอียด (Keywords, สถิติตรวจสอบ, คลิปของใคร, หัวข้ออะไร, และลิงก์รูปภาพ)
+- 🛠️ แก้ปัญหาภาพหลักฐานไม่ขึ้น (-) โดยการเพิ่มระบบฝากรูปฟรีสำรองอัตโนมัติ (Catbox & Tmpfiles) ทำงานทันทีเมื่อ Google Drive ติดโควตา
 - 🛠️ แก้ไขบั๊กตำแหน่งแถวเลื่อน โดยเปลี่ยนมาใช้การระบุตำแหน่งเซลล์ตรงๆ (B1 - B7) ป้องกันความผิดพลาด 100%
-- 🛠️ ดึงจำนวนข้อมูลสูงสุดจาก B7 ตรงๆ (แก้ปัญหาดึงคลิปได้แค่คีย์เวิร์ดละ 1 โพสต์)
+- 🛠️ ดึงจำนวนข้อมูลสูงสุดจาก B7 ตรงๆ (แก้ปัญหาดึงคลิปได้แค่วันละ 1 โพสต์)
 - 🛠️ ดึงข้อมูลช่วงเวลาสแกนย้อนหลังจาก B4 ตรงๆ (1=Day, 2=Week, 3=Month)
 - ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
-- แก้ปัญหา Service Account Drive Quota 0 Byte โดยอัปโหลดรูปผ่าน ImgBB API และแชร์สิทธิ์โฟลเดอร์ Google Drive
 - ระบบ Hard Limit ป้องกันการดึงคลิปเกินจำนวนที่กำหนด (ประหยัดทรัพยากรเครื่อง)
 - เพิ่มระบบ Retry ป้องกัน Google Sheets API Error 503 ล่มชั่วคราว
 """
@@ -128,28 +129,47 @@ def send_google_chat_message(message, webhook_url):
     except Exception as e: 
         print(f"⚠️ Google Chat Send Exception: {e}")
 
-def generate_summary_message(name_group, p_list, raw, unique, dup, chat):
+# 🛠️ พัฒนาฟังก์ชันรายงานผลใหม่ทั้งหมด ละเอียด ชัดเจน แยกหมวดหมู่ ค้นหาอันไหน เจออันไหน ของใคร
+def generate_summary_message(name_group, p_list, keywords_list, raw, unique, dup, chat):
     if not raw and not unique: return None 
-    msg = f"📊 อัปเดตข้อมูลจาก Logo Hunter ({name_group})\n"
-    msg += f"🔗 แพลตฟอร์ม: {', '.join(p_list)}\n"
-    msg += f"📥 ดึงมาจาก API ทั้งหมด: {len(raw)} โพสต์\n"
-    msg += f"🔁 เป็นโพสต์ซ้ำ/เก่า (ระบบคัดออก): {len(dup)} โพสต์\n"
-    msg += f"👁️ ส่งให้ AI สแกนภาพ/วิดีโอจริง: {len(unique)} โพสต์\n"
-    msg += f"🎯 AI ตรวจพบโลโก้ BigC: {len(chat)} โพสต์\n"
+    
+    kw_str = ", ".join(keywords_list) if keywords_list else "-"
+    
+    msg = f"📊 *รายงานสรุปข้อมูลจาก Logo Hunter ({name_group})*\n"
+    msg += f"──────────────────────\n"
+    msg += f"🔍 *คำค้นหา (Keywords):* `{kw_str}`\n"
+    msg += f"🔗 *แพลตฟอร์ม:* {', '.join(p_list)}\n"
+    msg += f"📥 *ดึงข้อมูลมาจาก API ทั้งหมด:* `{len(raw)}` โพสต์\n"
+    msg += f"🔁 *โพสต์ซ้ำ/เก่า (คัดกรองออก):* `{len(dup)}` โพสต์\n"
+    msg += f"👁️ *ส่งให้ AI ประมวลผลจริง:* `{len(unique)}` โพสต์\n"
+    msg += f"🎯 *ตรวจจับพบโลโก้ BigC:* `{len(chat)}` โพสต์\n"
+    msg += f"──────────────────────\n"
     
     if chat:
-        msg += "\n🚨 ลิงก์โพสต์ที่พบโลโก้:\n"
+        msg += "🚨 *รายละเอียดโพสต์ที่ตรวจพบโลโก้ (Logo Found):*\n"
         for item in chat[:15]: 
-            msg += f"• {item['url']}\n  (🖼️ รูปหลักฐาน: {item['img_url']})\n"
+            title_short = item.get('title', 'ไม่มีชื่อคลิป')
+            if len(title_short) > 45:
+                title_short = title_short[:45] + "..."
+            msg += f"• *[{item['platform']}]* ช่อง `{item['user']}`\n"
+            msg += f"  🎬 คลิป: _{title_short}_\n"
+            msg += f"  🔗 ลิงก์โพสต์: {item['url']}\n"
+            msg += f"  🖼️ ภาพหลักฐาน: {item['img_url']}\n\n"
         if len(chat) > 15: 
-            msg += f"• ... และอื่นๆ อีก {len(chat) - 15} รายการ\n"
+            msg += f"• ... และรายการตรวจพบอื่นๆ อีก `{len(chat) - 15}` รายการ\n\n"
     elif unique:
-        msg += "\n📌 ลิงก์โพสต์ใหม่ (สแกนแล้วไม่พบโลโก้ แต่ลง Sheet ให้ไปรีวิวด้วยมือ):\n"
-        for u in unique[:15]: 
-            msg += f"• {u['url']}\n"
-        if len(unique) > 15: 
-            msg += f"• ... และอื่นๆ อีก {len(unique) - 15} รายการ\n"
-    msg += "\n✅ ตรวจสอบรายละเอียดได้ใน Sheet Log"
+        msg += "📌 *รายละเอียดโพสต์ใหม่ที่ไม่พบโลโก้ (AI เคลียร์แล้ว):*\n"
+        for u in unique[:12]: 
+            title_short = u.get('title', 'ไม่มีชื่อคลิป')
+            if len(title_short) > 45:
+                title_short = title_short[:45] + "..."
+            msg += f"• *[{u['platform']}]* ช่อง `{u['user']}` - _{title_short}_\n"
+            msg += f"  🔗 ลิงก์: {u['url']}\n"
+        if len(unique) > 12: 
+            msg += f"• ... และรายการส่งสแกนอื่นๆ อีก `{len(unique) - 12}` รายการ\n"
+            
+    msg += f"──────────────────────\n"
+    msg += "✅ บันทึกประวัติลง Google Sheet (Apify) เรียบร้อยแล้ว"
     return msg
 
 def update_heartbeat(ws_control):
@@ -191,10 +211,12 @@ def predict_logo(model, frame):
     return False, 0.0, None
 
 def save_evidence(image_pil, video_id, timestamp_str):
+    local_filename = "-"
     try:
         safe_ts = str(timestamp_str).replace(":", "_")
         local_filename = f"DETECT_{video_id}_{safe_ts}.jpg"
         
+        # 🌟 1. ลองใช้ ImgBB ก่อนหากมีใน Secrets
         if IMGBB_API_KEY:
             try:
                 buffered = io.BytesIO()
@@ -215,22 +237,68 @@ def save_evidence(image_pil, video_id, timestamp_str):
             except Exception as imgbb_e:
                 print(f" ⚠️ ImgBB Exception: {imgbb_e}")
 
-        image_pil.save(local_filename)
-        
-        if not GDRIVE_FOLDER_ID and not ('drive_service' in globals()):
-            file_path = os.path.join(RESULTS_PATH, local_filename)
-            drive_link = f"https://drive.google.com/drive/search?q={urllib.parse.quote(local_filename)}"
-            return f'=HYPERLINK("{drive_link}", "🖼️ กดดูรูปภาพ")', drive_link
-            
-        file_metadata = {'name': local_filename, 'parents': [GDRIVE_FOLDER_ID]}
-        media = MediaFileUpload(local_filename, mimetype='image/jpeg', resumable=True)
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
-        drive_service.permissions().create(fileId=file.get('id'), body={'type': 'anyone', 'role': 'reader'}).execute()
-        url = file.get('webViewLink')
-        os.remove(local_filename)
-        return f'=HYPERLINK("{url}", "🖼️ กดดูรูปภาพ")', url
+        # 🌟 2. ลองอัปโหลดไปที่ Google Drive (ตาม Option B)
+        try:
+            image_pil.save(local_filename)
+            if GDRIVE_FOLDER_ID and ('drive_service' in globals()):
+                file_metadata = {'name': local_filename, 'parents': [GDRIVE_FOLDER_ID]}
+                media = MediaFileUpload(local_filename, mimetype='image/jpeg', resumable=True)
+                file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+                drive_service.permissions().create(fileId=file.get('id'), body={'type': 'anyone', 'role': 'reader'}).execute()
+                url = file.get('webViewLink')
+                if os.path.exists(local_filename):
+                    os.remove(local_filename)
+                return f'=HYPERLINK("{url}", "🖼️ กดดูรูปภาพ")', url
+        except Exception as drive_e:
+            print(f" ⚠️ Google Drive Upload Failed (Quota/Auth Issue): {drive_e}")
+
+        # 🌟 3. แผนสำรองอัจฉริยะแบบไร้ตัวตน (Anonymous Image Upload Fallback)
+        # ป้องกันภาพหลักฐานไม่ขึ้น (-) โดยจะส่งรูปไปที่ Catbox หรือ Tmpfiles ให้เองอัตโนมัติ
+        for service in ['catbox', 'tmpfiles']:
+            try:
+                buffered = io.BytesIO()
+                image_pil.save(buffered, format="JPEG")
+                buffered.seek(0)
+                
+                if service == 'catbox':
+                    res = requests.post(
+                        "https://catbox.moe/user/api.php",
+                        data={"reqtype": "fileupload"},
+                        files={"fileToUpload": (local_filename, buffered, "image/jpeg")},
+                        timeout=15
+                    )
+                    if res.status_code == 200 and res.text.startswith("http"):
+                        img_url = res.text.strip()
+                        print(f" 🟢 [Fallback Success] อัปโหลดรูปสำเร็จผ่าน Catbox: {img_url}")
+                        if os.path.exists(local_filename):
+                            os.remove(local_filename)
+                        return f'=HYPERLINK("{img_url}", "🖼️ กดดูรูปภาพ")', img_url
+                        
+                elif service == 'tmpfiles':
+                    res = requests.post(
+                        "https://tmpfiles.org/api/v1/upload",
+                        files={"file": (local_filename, buffered, "image/jpeg")},
+                        timeout=15
+                    )
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data.get("status") == "success":
+                            orig_url = data["data"]["url"]
+                            img_url = orig_url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+                            print(f" 🟢 [Fallback Success] อัปโหลดรูปสำเร็จผ่าน Tmpfiles: {img_url}")
+                            if os.path.exists(local_filename):
+                                os.remove(local_filename)
+                            return f'=HYPERLINK("{img_url}", "🖼️ กดดูรูปภาพ")', img_url
+            except Exception as fb_e:
+                print(f" ⚠️ Fallback to {service} failed: {fb_e}")
+
+        if os.path.exists(local_filename):
+            os.remove(local_filename)
+        return "-", "-"
     except Exception as e:
-        print(f" ⚠️ Upload Error: {e}")
+        print(f" ⚠️ Save Evidence Exception: {e}")
+        if os.path.exists(local_filename):
+            os.remove(local_filename)
         return "-", "-"
 
 def fetch_data(platforms, keywords, max_res, days_back):
@@ -410,7 +478,7 @@ def main():
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.7 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v7.9.9 (GitHub Edition) ONLINE")
 
     while True:
         try:
@@ -516,7 +584,14 @@ def main():
                     print(f"  🎯 Logo Found at {final_ts}!")
                     formula, img_url = save_evidence(best_img, v['id'], final_ts)
                     detect_status = "Yes"
-                    chat_summary.append({'url': clean_url, 'img_url': str(img_url), 'platform': clean_platform})
+                    # 🌟 ส่ง Metadata ของคลิปไปร่วมแสดงในแชทให้ละเอียดด้วย
+                    chat_summary.append({
+                        'url': clean_url, 
+                        'img_url': str(img_url), 
+                        'platform': clean_platform,
+                        'title': clean_title,
+                        'user': clean_user
+                    })
                 else:
                     print("  ❌ No logo.")
                     formula, img_url = "-", "-"
@@ -540,7 +615,7 @@ def main():
                     print(f"  ❌ เขียนลง Sheet ไม่สำเร็จ: {sheet_err}")
 
             if ENABLE_STATUS_MESSAGE or len(chat_summary) > 0:
-                msg_all = generate_summary_message("รวมทุกแพลตฟอร์ม", platforms, raw_list, unique_list, duplicate_list, chat_summary)
+                msg_all = generate_summary_message("รวมทุกแพลตฟอร์ม", platforms, keywords, raw_list, unique_list, duplicate_list, chat_summary)
                 if msg_all: send_google_chat_message(msg_all, GOOGLE_CHAT_WEBHOOK)
 
             tk_raw = [x for x in raw_list if x['platform'] == 'TikTok']
@@ -550,7 +625,7 @@ def main():
             tk_plats = ['TikTok'] if 'TikTok' in platforms else []
 
             if tk_plats and (ENABLE_STATUS_MESSAGE or len(tk_chat) > 0):
-                msg_tk = generate_summary_message("TikTok", tk_plats, tk_raw, tk_uni, tk_dup, tk_chat)
+                msg_tk = generate_summary_message("TikTok", tk_plats, keywords, tk_raw, tk_uni, tk_dup, tk_chat)
                 if msg_tk: send_google_chat_message(msg_tk, GOOGLE_CHAT_WEBHOOK_TIKTOK)
 
             if 'Run Once' in run_mode:
