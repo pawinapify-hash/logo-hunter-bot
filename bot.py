@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-🚀 INTELLIGENT LOGO HUNTER v7.9.9 (Ultimate GitHub Edition - Advanced Reporting)
-- โค้ดสำหรับ GitHub Actions ดึง API Keys และ Tokens จาก Secrets ปลอดภัย 100%
-- 🛠️ ปรับปรุงระบบรายงานผล Google Chat สรุปครบทุกรายละเอียด (Keywords, สถิติตรวจสอบ, คลิปของใคร, หัวข้ออะไร, และลิงก์รูปภาพ)
-- 🛠️ แก้ปัญหาภาพหลักฐานไม่ขึ้น (-) โดยการเพิ่มระบบฝากรูปฟรีสำรองอัตโนมัติ (Catbox & Tmpfiles) ทำงานทันทีเมื่อ Google Drive ติดโควตา
-- 🛠️ แก้ไขบั๊กตำแหน่งแถวเลื่อน โดยเปลี่ยนมาใช้การระบุตำแหน่งเซลล์ตรงๆ (B1 - B7) ป้องกันความผิดพลาด 100%
-- 🛠️ ดึงจำนวนข้อมูลสูงสุดจาก B7 ตรงๆ (แก้ปัญหาดึงคลิปได้แค่วันละ 1 โพสต์)
-- 🛠️ ดึงข้อมูลช่วงเวลาสแกนย้อนหลังจาก B4 ตรงๆ (1=Day, 2=Week, 3=Month)
-- ปรับโครงสร้าง Payload ให้แมตช์กับ 'clockworks/tiktok-scraper' (GdWCkxBtKWOsKjdch) 100%
+🚀 INTELLIGENT LOGO HUNTER v8.2.1 (Ultimate GitHub Edition - Stable Restore)
+- โค้ดรุ่นเสถียรรักษาโครงสร้าง v7.9.1 ดั้งเดิม 100% เชื่อมต่อ Secrets บัญชีใหม่ปลอดภัย
+- 🛠️ แก้ปัญหาภาพหลักฐานไม่ขึ้น (-) ด้วยระบบฝากรูปฟรีสำรองอัตโนมัติ (Catbox & Tmpfiles) เมื่อ Google Drive พื้นที่เต็ม
+- ใช้การค้นหาผ่าน 'clockworks/tiktok-scraper' ดึงค่าตัวแปรจากแถวเดิมคงที่ (B1 - B7)
 - ระบบ Hard Limit ป้องกันการดึงคลิปเกินจำนวนที่กำหนด (ประหยัดทรัพยากรเครื่อง)
 - เพิ่มระบบ Retry ป้องกัน Google Sheets API Error 503 ล่มชั่วคราว
+- อ่านค่า Time Filter แบบเดิม (1=Day, 2=Week, 3=Month)
+- เก็บ Log คลิปเก่ารวมในลิสต์ "ซ้ำ" แต่ไม่สแกนและไม่ลง Sheet Apify
+- Batch Insert แทรก "FALSE" ให้ Checkbox ใช้งานได้ (คอลัมน์ I), Timestamp (คอลัมน์ J)
 """
 
 import os
@@ -47,6 +46,7 @@ import gspread
 from PIL import Image
 from torchvision import transforms
 
+# 🛡️ ป้องกัน Error เวลาไม่ได้รันบน Colab
 try:
     from google.colab import drive, auth
     from google.auth import default
@@ -129,52 +129,37 @@ def send_google_chat_message(message, webhook_url):
     except Exception as e: 
         print(f"⚠️ Google Chat Send Exception: {e}")
 
-# 🛠️ พัฒนาฟังก์ชันรายงานผลใหม่ทั้งหมด ละเอียด ชัดเจน แยกหมวดหมู่ ค้นหาอันไหน เจออันไหน ของใคร
-def generate_summary_message(name_group, p_list, keywords_list, raw, unique, dup, chat):
+# 🛠️ ปรับฟังก์ชันแสดงข้อความรายงานให้สั้น กระชับ คลีนตา ตามเทมเพลตที่คุณต้องการ 100%
+def generate_summary_message(name_group, p_list, raw, unique, dup, chat):
     if not raw and not unique: return None 
-    
-    kw_str = ", ".join(keywords_list) if keywords_list else "-"
-    
-    msg = f"📊 *รายงานสรุปข้อมูลจาก Logo Hunter ({name_group})*\n"
-    msg += f"──────────────────────\n"
-    msg += f"🔍 *คำค้นหา (Keywords):* `{kw_str}`\n"
-    msg += f"🔗 *แพลตฟอร์ม:* {', '.join(p_list)}\n"
-    msg += f"📥 *ดึงข้อมูลมาจาก API ทั้งหมด:* `{len(raw)}` โพสต์\n"
-    msg += f"🔁 *โพสต์ซ้ำ/เก่า (คัดกรองออก):* `{len(dup)}` โพสต์\n"
-    msg += f"👁️ *ส่งให้ AI ประมวลผลจริง:* `{len(unique)}` โพสต์\n"
-    msg += f"🎯 *ตรวจจับพบโลโก้ BigC:* `{len(chat)}` โพสต์\n"
-    msg += f"──────────────────────\n"
+    msg = f"📊 อัปเดตข้อมูลจาก Logo Hunter ({name_group})\n"
+    msg += f"🔗 แพลตฟอร์ม: {', '.join(p_list)}\n"
+    msg += f"📥 ดึงมาทั้งหมด: {len(raw)} โพสต์\n"
+    msg += f"✨ ข้อมูลใหม่: {len(unique)} โพสต์\n"
+    msg += f"🎯 พบโลโก้: {len(chat)} โพสต์\n\n"
     
     if chat:
-        msg += "🚨 *รายละเอียดโพสต์ที่ตรวจพบโลโก้ (Logo Found):*\n"
+        msg += "🚨 ลิงก์โพสต์ที่พบโลโก้:\n"
         for item in chat[:15]: 
-            title_short = item.get('title', 'ไม่มีชื่อคลิป')
-            if len(title_short) > 45:
-                title_short = title_short[:45] + "..."
-            msg += f"• *[{item['platform']}]* ช่อง `{item['user']}`\n"
-            msg += f"  🎬 คลิป: _{title_short}_\n"
-            msg += f"  🔗 ลิงก์โพสต์: {item['url']}\n"
-            msg += f"  🖼️ ภาพหลักฐาน: {item['img_url']}\n\n"
+            msg += f"• {item['url']}\n"
+            if 'img_url' in item and item['img_url'] != "-":
+                msg += f"  (🖼️ รูปหลักฐาน: {item['img_url']})\n"
         if len(chat) > 15: 
-            msg += f"• ... และรายการตรวจพบอื่นๆ อีก `{len(chat) - 15}` รายการ\n\n"
+            msg += f"• ... และอื่นๆ อีก {len(chat) - 15} รายการ\n"
+        msg += "\n"
     elif unique:
-        msg += "📌 *รายละเอียดโพสต์ใหม่ที่ไม่พบโลโก้ (AI เคลียร์แล้ว):*\n"
-        for u in unique[:12]: 
-            title_short = u.get('title', 'ไม่มีชื่อคลิป')
-            if len(title_short) > 45:
-                title_short = title_short[:45] + "..."
-            msg += f"• *[{u['platform']}]* ช่อง `{u['user']}` - _{title_short}_\n"
-            msg += f"  🔗 ลิงก์: {u['url']}\n"
-        if len(unique) > 12: 
-            msg += f"• ... และรายการส่งสแกนอื่นๆ อีก `{len(unique) - 12}` รายการ\n"
+        msg += "📌 ลิงก์โพสต์ใหม่ (ส่งตรวจสอบแล้ว):\n"
+        for u in unique[:15]: 
+            msg += f"• {u['url']}\n"
+        if len(unique) > 15: 
+            msg += f"• ... และอื่นๆ อีก {len(unique) - 15} รายการ\n"
+        msg += "\n"
             
-    msg += f"──────────────────────\n"
-    msg += "✅ บันทึกประวัติลง Google Sheet (Apify) เรียบร้อยแล้ว"
+    msg += "✅ ตรวจสอบรายละเอียดได้ใน Sheet Log"
     return msg
 
 def update_heartbeat(ws_control):
     try: 
-        # เขียนเวลาชีพจรลงที่ B9 ตรงๆ เพื่อเช็คสถานะการทำงาน
         ws_control.update_cell(9, 2, get_bkk_now().strftime('%Y-%m-%d %H:%M:%S'))
     except: 
         pass
@@ -216,7 +201,7 @@ def save_evidence(image_pil, video_id, timestamp_str):
         safe_ts = str(timestamp_str).replace(":", "_")
         local_filename = f"DETECT_{video_id}_{safe_ts}.jpg"
         
-        # 🌟 1. ลองใช้ ImgBB ก่อนหากมีใน Secrets
+        # 🌟 1. ลองอัปโหลดผ่าน ImgBB ก่อน (หากคุณตั้งค่าไว้ใน GitHub Secrets)
         if IMGBB_API_KEY:
             try:
                 buffered = io.BytesIO()
@@ -237,7 +222,7 @@ def save_evidence(image_pil, video_id, timestamp_str):
             except Exception as imgbb_e:
                 print(f" ⚠️ ImgBB Exception: {imgbb_e}")
 
-        # 🌟 2. ลองอัปโหลดไปที่ Google Drive (ตาม Option B)
+        # 🌟 2. ลองอัปโหลดผ่าน Google Drive (หากแชร์สิทธิ์เป็น Editor ไว้)
         try:
             image_pil.save(local_filename)
             if GDRIVE_FOLDER_ID and ('drive_service' in globals()):
@@ -252,8 +237,8 @@ def save_evidence(image_pil, video_id, timestamp_str):
         except Exception as drive_e:
             print(f" ⚠️ Google Drive Upload Failed (Quota/Auth Issue): {drive_e}")
 
-        # 🌟 3. แผนสำรองอัจฉริยะแบบไร้ตัวตน (Anonymous Image Upload Fallback)
-        # ป้องกันภาพหลักฐานไม่ขึ้น (-) โดยจะส่งรูปไปที่ Catbox หรือ Tmpfiles ให้เองอัตโนมัติ
+        # 🌟 3. 🚨 ระบบสำรองอัจฉริยะแบบไร้ตัวตน (Catbox & Tmpfiles Fallback)
+        # หากทั้ง Google Drive และ ImgBB ติดปัญหาด้านสิทธิ์หรือโควตา บอทจะอัปโหลดรูปฝากไว้ที่นี่ให้อัตโนมัติเพื่อให้ลิงก์แสดงผลได้เสมอตลอด 24 ชั่วโมง
         for service in ['catbox', 'tmpfiles']:
             try:
                 buffered = io.BytesIO()
@@ -346,15 +331,15 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     print(f"  ❌ YouTube API Keys ทั้งหมดโควตาเต็ม หรือไม่ได้ตั้งค่า!")
 
             else:
-                actor = {'TikTok': 'GdWCkxBtKWOsKjdch', 'Instagram': 'apify/instagram-hashtag-scraper', 'Facebook': 'apify/facebook-search-scraper'}.get(plat)
+                actor = {'TikTok': 'clockworks/tiktok-scraper', 'Instagram': 'apify/instagram-hashtag-scraper', 'Facebook': 'apify/facebook-search-scraper'}.get(plat)
                 if not actor: continue
                 
                 inp = {}
                 if plat == 'TikTok':
                     clean_kw = kw.replace("#", "").strip()
                     inp = {
-                        "resultsLimit": max_res,
-                        "sortType": 1, 
+                        "maxItems": max_res,
+                        "resultsPerPage": max_res,
                         "proxyConfiguration": {"useApifyProxy": True}
                     }
                     if kw.startswith('#'):
@@ -444,6 +429,7 @@ def fetch_data(platforms, keywords, max_res, days_back):
 def main():
     global gc
     
+    # เลือกว่าจะ Auth แบบ Colab หรือแบบ GitHub Secrets
     if not SHEET_ID and 'auth' in globals():
         auth.authenticate_user()
         creds, _ = default()
@@ -456,6 +442,7 @@ def main():
         print("❌ ไม่พบ SHEET_ID กรุณาตรวจสอบการตั้งค่า")
         sys.exit(1)
 
+    # 🛡️ เพิ่มระบบ Retry ป้องกัน Google Sheets API ล่มชั่วคราว (Error 503)
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -467,52 +454,38 @@ def main():
             except:
                 ws_logs = sh.add_worksheet(title="Scan_Logs", rows=1000, cols=4)
                 ws_logs.append_row(['Timestamp', 'ลิสต์รายการที่ซ้ำ', 'ลิสต์รายการที่ไม่ซ้ำ', 'Platforms'])
-            break
+            break # สำเร็จแล้วออกจากลูป
         except Exception as e:
             print(f"⚠️ การเชื่อมต่อ Google Sheets ขัดข้อง (Attempt {attempt+1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
-                time.sleep(10)
+                time.sleep(10) # รอ 10 วินาทีแล้วลองใหม่
             else:
                 print("❌ ไม่สามารถเชื่อมต่อ Google Sheets ได้ ระบบจะปิดการทำงานเพื่อความปลอดภัย")
                 sys.exit(1)
 
     engine = load_ai_model()
     scanned_memory = set()
-    print(f"\n🚀 LOGO HUNTER v7.9.9 (GitHub Edition) ONLINE")
+    print(f"\n🚀 LOGO HUNTER v8.2.1 (GitHub Edition) ONLINE")
 
     while True:
         try:
             update_heartbeat(ws_control)
-            
-            # ==========================================
-            # 🎯 🛠️ ดึงข้อมูลจากเซลล์โดยตรง (B1 - B7) ป้องกันปัญหายอดดึงเพี้ยน
-            # ==========================================
-            status = str(ws_control.acell('B1').value or "🔴 Stop").strip()
-            platforms_raw = str(ws_control.acell('B2').value or "TikTok").strip()
-            keywords_raw = str(ws_control.acell('B3').value or "บิ๊กซี").strip()
-            time_filter_raw = str(ws_control.acell('B4').value or "1").strip()
-            run_mode = str(ws_control.acell('B5').value or "Loop").strip()
-            interval_raw = str(ws_control.acell('B6').value or "60").strip()
-            max_res_raw = str(ws_control.acell('B7').value or "15").strip()
-
-            platforms = [p.strip() for p in platforms_raw.split(',')]
-            keywords = [k.strip() for k in keywords_raw.split(',')]
-            
-            # ตรรกะช่วงเวลาย้อนหลัง (1=Day, 2=Week, 3=Month)
-            days_back = 1
-            if '2' in time_filter_raw: days_back = 7
-            elif '3' in time_filter_raw: days_back = 30
-                
-            # ลิมิตจำนวนคลิปสูงสุดที่จะดึงต่อ 1 Keyword (ดึงตรงจาก B7 แน่นอน 100%)
-            max_res = int(max_res_raw) if max_res_raw.isdigit() else 15
-            interval = int(interval_raw) if interval_raw.isdigit() else 60
+            config = ws_control.col_values(2)
+            status = str(config[0]).strip() if len(config) > 0 else "🔴 Stop"
 
             if 'Start' not in status and '🟢' not in status:
                 print(f"\r⏳ [Standby] Waiting for command... ({get_bkk_now().strftime('%H:%M:%S')})", end="")
                 time.sleep(15)
                 continue
 
-            print(f"\n\n🔥 Processing Batch: {get_bkk_now().strftime('%H:%M:%S')} (Max Results Set to: {max_res})")
+            platforms = [p.strip() for p in config[1].split(',')]
+            keywords = [k.strip() for k in config[2].split(',')]
+            
+            days_back = 1 if '1' in str(config[3]) else 7 if '2' in str(config[3]) else 30
+            max_res = int(config[6]) if str(config[6]).isdigit() else 5
+            run_mode = str(config[4]).strip()
+
+            print(f"\n\n🔥 Processing Batch: {get_bkk_now().strftime('%H:%M:%S')} (Max Results: {max_res})")
             raw_list = fetch_data(platforms, keywords, max_res, days_back)
             processed_urls = set(ws_data.col_values(7)[1:]) 
             
@@ -584,7 +557,6 @@ def main():
                     print(f"  🎯 Logo Found at {final_ts}!")
                     formula, img_url = save_evidence(best_img, v['id'], final_ts)
                     detect_status = "Yes"
-                    # 🌟 ส่ง Metadata ของคลิปไปร่วมแสดงในแชทให้ละเอียดด้วย
                     chat_summary.append({
                         'url': clean_url, 
                         'img_url': str(img_url), 
@@ -615,7 +587,7 @@ def main():
                     print(f"  ❌ เขียนลง Sheet ไม่สำเร็จ: {sheet_err}")
 
             if ENABLE_STATUS_MESSAGE or len(chat_summary) > 0:
-                msg_all = generate_summary_message("รวมทุกแพลตฟอร์ม", platforms, keywords, raw_list, unique_list, duplicate_list, chat_summary)
+                msg_all = generate_summary_message("รวมทุกแพลตฟอร์ม", platforms, raw_list, unique_list, duplicate_list, chat_summary)
                 if msg_all: send_google_chat_message(msg_all, GOOGLE_CHAT_WEBHOOK)
 
             tk_raw = [x for x in raw_list if x['platform'] == 'TikTok']
@@ -625,24 +597,27 @@ def main():
             tk_plats = ['TikTok'] if 'TikTok' in platforms else []
 
             if tk_plats and (ENABLE_STATUS_MESSAGE or len(tk_chat) > 0):
-                msg_tk = generate_summary_message("TikTok", tk_plats, keywords, tk_raw, tk_uni, tk_dup, tk_chat)
+                msg_tk = generate_summary_message("TikTok", tk_plats, tk_raw, tk_uni, tk_dup, tk_chat)
                 if msg_tk: send_google_chat_message(msg_tk, GOOGLE_CHAT_WEBHOOK_TIKTOK)
 
+            # 🛠️ ปรับให้รองรับการรันแบบ Serverless (GitHub) และ Colab อย่างสมบูรณ์
             if 'Run Once' in run_mode:
                 print("\n🏁 Run Once finished. Updating status to Stop.")
                 try: 
-                    # ปรับสถานะ B1 เป็น Stop ด้วยการระบุตรงพิกัดเซลล์
-                    ws_control.update_cell(1, 2, '🔴 Stop')
+                    ws_control.update_cell(1, 2, '🔴 Stop') 
                 except: 
                     pass
                 if not ('auth' in globals()): 
-                    break
+                    break # ออกจากลูปสำหรับ GitHub
             
             if not ('auth' in globals()):
+                # ถ้ารันบน GitHub แบบปกติ ให้ทำงาน 1 รอบแล้วปิดตัวเอง (ให้ Watchdog มาปลุกใหม่ ไม่ต้องตั้ง Stop)
                 print("\n🏁 Serverless Mode finished 1 cycle. Keeping status Active for next Watchdog trigger.")
                 break 
             else:
+                # ถ้ารันบน Colab แบบปกติ ให้รันวนลูปตามเวลาที่ตั้งไว้
                 if 'Run Once' not in run_mode:
+                    interval = int(config[5]) if str(config[5]).isdigit() else 60
                     print(f"\n💤 Next iteration in {interval} mins...")
                     for _ in range(interval * 6):
                         update_heartbeat(ws_control)
