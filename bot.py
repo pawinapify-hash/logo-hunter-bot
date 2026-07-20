@@ -474,9 +474,8 @@ def main():
             status = str(config[0]).strip() if len(config) > 0 else "🔴 Stop"
 
             if 'Start' not in status and '🟢' not in status:
-                print(f"\r⏳ [Standby] Waiting for command... ({get_bkk_now().strftime('%H:%M:%S')})", end="")
-                time.sleep(15)
-                continue
+                print(f"[SYSTEM STATUS = STOP] ({get_bkk_now().strftime('%H:%M:%S')})")
+                break
 
             platforms = [p.strip() for p in config[1].split(',')]
             keywords = [k.strip() for k in config[2].split(',')]
