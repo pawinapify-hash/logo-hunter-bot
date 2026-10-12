@@ -388,6 +388,10 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     try:
                         client = ApifyClient(apify_token)
                         run = client.actor(actor).call(run_input=inp, wait_duration=timedelta(seconds=120))
+                        if not isinstance(run, dict):
+                            run = {'defaultDatasetId': getattr(run, 'default_dataset_id', None)}
+                        if not run.get('defaultDatasetId'):
+                            raise RuntimeError('Apify run completed but dataset ID is missing')
                         
                         count_apify = 0
                         for item in client.dataset(run["defaultDatasetId"]).list_items().items:
