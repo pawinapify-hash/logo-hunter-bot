@@ -43,4 +43,4 @@ jobs:
           APIFY_TOKENS: ${{ secrets.APIFY_TOKENS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
-        run: python bot.py
+        run: python -u bot.py
