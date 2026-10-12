@@ -16,7 +16,6 @@ import sys
 import time
 import random
 import warnings
-import subprocess
 import tempfile
 import atexit
 import requests
@@ -58,7 +57,8 @@ def install_package(package):
 needed_packages = ['yt-dlp', 'apify-client', 'gspread', 'opencv-python', 'torch', 'torchvision']
 for pkg in needed_packages:
     try: __import__(pkg.replace('-', '_'))
-    except ImportError: install_package(pkg)
+    except ImportError:
+        raise RuntimeError('Missing dependency. Install dependencies in workflow before running bot.py.')
 
 import yt_dlp
 from apify_client import ApifyClient
