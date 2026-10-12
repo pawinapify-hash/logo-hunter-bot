@@ -17,6 +17,8 @@ import time
 import random
 import warnings
 import subprocess
+import tempfile
+import atexit
 import requests
 import re
 import numpy as np
@@ -29,6 +31,26 @@ warnings.filterwarnings("ignore")
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 ENABLE_STATUS_MESSAGE = True
+
+def _remove_temporary_file(path):
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
+def _create_youtube_cookie_file():
+    cookie_data = os.environ.get("YOUTUBE_COOKIES")
+    if not cookie_data:
+        return None
+
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".txt", delete=False) as cookie_file:
+        cookie_file.write(cookie_data)
+        cookie_path = cookie_file.name
+
+    atexit.register(_remove_temporary_file, cookie_path)
+    return cookie_path
+
+YOUTUBE_COOKIE_FILE = _create_youtube_cookie_file()
 
 def install_package(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -519,8 +541,12 @@ def main():
                 found, final_ts, best_img = False, "-", None
                 
                 if engine is not None:
+                    skip_image_fallback = False
                     try:
-                        with yt_dlp.YoutubeDL({'format': 'best', 'quiet': True, 'nocheckcertificate': True, 'socket_timeout': 10}) as ydl:
+                        ydl_options = {'format': 'best', 'quiet': True, 'nocheckcertificate': True, 'socket_timeout': 10}
+                        if YOUTUBE_COOKIE_FILE:
+                            ydl_options['cookiefile'] = YOUTUBE_COOKIE_FILE
+                        with yt_dlp.YoutubeDL(ydl_options) as ydl:
                             stream = ydl.extract_info(v['url'], download=False).get('url')
                             if stream:
                                 cap = cv2.VideoCapture(stream)
@@ -533,10 +559,14 @@ def main():
                                             found, best_img, final_ts = True, img, f"{int((i//30)//60):02d}:{int((i//30)%60):02d}"
                                             break
                                 cap.release()
-                    except: 
-                        pass
+                    except Exception as e:
+                        err_msg = str(e).lower()
+                        is_youtube_url = 'youtube.com' in str(v.get('url', '')).lower() or 'youtu.be' in str(v.get('url', '')).lower()
+                        if is_youtube_url and 'sign in to confirm' in err_msg and 'not a bot' in err_msg:
+                            skip_image_fallback = True
+                            print('  [WARN] YouTube bot-check detected. Skipping thumbnail fallback.')
 
-                    if not found and v.get('image_url'):
+                    if not found and not skip_image_fallback and v.get('image_url'):
                         try:
                             resp = requests.get(v['image_url'], timeout=10)
                             img = cv2.imdecode(np.asarray(bytearray(resp.content), dtype=np.uint8), cv2.IMREAD_COLOR)

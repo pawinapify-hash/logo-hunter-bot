@@ -20,12 +20,18 @@ HOW IT WORKS - STEP BY STEP
      opencv-python, torch, torchvision
    - Loads API keys from environment variables:
        * YOUTUBE_API_KEYS (comma-separated)
+       * YOUTUBE_COOKIES (optional Netscape-format cookies.txt content for yt-dlp)
        * APIFY_TOKENS (comma-separated)
        * IMGBB_API_KEY (optional, for image hosting)
        * SHEET_ID (Google Sheets spreadsheet ID)
        * GDRIVE_FOLDER_ID (Google Drive folder for evidence storage)
    - Authenticates with Google Sheets and Google Drive using credentials.json
    - Loads the AI model from bigc_model.pth
+   - GitHub Actions uses Python 3.11 and Deno for yt-dlp's JavaScript support.
+     If YouTube requires sign-in, set the optional YOUTUBE_COOKIES GitHub Secret
+     to the contents of a Netscape-format cookies.txt file. Treat these cookies
+     as credentials; they are written to a temporary file during the run and
+     removed on normal shutdown. YouTube cookies may expire or be rejected.
 
 2. READ CONFIGURATION
    - Connects to Google Sheets (target spreadsheet)

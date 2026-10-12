@@ -15,12 +15,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp apify-client gspread opencv-python torch torchvision gdown google-api-python-client google-auth-oauthlib
+          pip install "yt-dlp[default]" apify-client gspread opencv-python torch torchvision gdown google-api-python-client google-auth-oauthlib
 
       - name: Download AI Model from Google Drive
         run: |
@@ -34,6 +39,7 @@ jobs:
       - name: Run Bot Script
         env:
           YOUTUBE_API_KEYS: ${{ secrets.YOUTUBE_API_KEYS }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
           APIFY_TOKENS: ${{ secrets.APIFY_TOKENS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
