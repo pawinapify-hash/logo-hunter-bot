@@ -51,12 +51,12 @@ def _create_youtube_cookie_file():
 
 YOUTUBE_COOKIE_FILE = _create_youtube_cookie_file()
 
-def install_package(package):
+if False:
     subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-needed_packages = ['yt-dlp', 'apify-client', 'gspread', 'opencv-python', 'torch', 'torchvision']
+needed_packages = ['yt_dlp', 'apify_client', 'gspread', 'cv2', 'torch', 'torchvision']
 for pkg in needed_packages:
-    try: __import__(pkg.replace('-', '_'))
+    try: __import__(pkg)
     except ImportError:
         raise RuntimeError('Missing dependency. Install dependencies in workflow before running bot.py.')
 
