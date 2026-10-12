@@ -387,7 +387,7 @@ def fetch_data(platforms, keywords, max_res, days_back):
                     if not apify_token or "ใส่_" in apify_token: continue
                     try:
                         client = ApifyClient(apify_token)
-                        run = client.actor(actor).call(run_input=inp, timeout_secs=120)
+                        run = client.actor(actor).call(run_input=inp, wait_duration=timedelta(seconds=120))
                         
                         count_apify = 0
                         for item in client.dataset(run["defaultDatasetId"]).list_items().items:
